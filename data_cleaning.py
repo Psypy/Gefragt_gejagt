@@ -95,3 +95,6 @@ month_dict = {"Jan.": "January", "Feb.": "February", "März": "March", "Apr": "A
               "Dez.": "December"}
 
 gg['date'] = pd.to_datetime(gg['Datum'].replace(to_replace=month_dict, regex=True))
+
+# Export to Excel for Tableau
+gg.to_excel("Gefragt_gejagt.xlsx")
