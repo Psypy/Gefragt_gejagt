@@ -3,15 +3,14 @@ import numpy as np
 import unicodedata
 import re
 
+# Load data
 gg = pd.read_csv('Gefragt_gejagt_data.csv')
-print(gg.columns)
-datum = gg.loc[0, 'Datum']
 
-# Drop rows that reprsent shows that have not been aired (i.e. have no data)
-gg = gg[gg.index <= 551]
+# Drop rows that represent shows that have not been aired (i.e. have no data)
+gg = gg.dropna(subset=['Jäger'], axis=0)
 
 # Normalizing unicode data in strings
-gg['Datum'] = gg['Datum'].apply(lambda x: unicodedata.normalize("NFKD", x))
+gg['Datum'] = gg['Datum'].apply(lambda x: unicodedata.normalize("NFKC", x))
 gg['Finalisten'] = gg['Finalisten'].apply(lambda x: unicodedata.normalize("NFKD", x))
 
 # Clean the "Nr. (gesamt) column
@@ -24,14 +23,14 @@ gg['episode'] = nr_gesamt_cols[nr_gesamt_cols.columns[0]]\
 # Drop the no irrelevant "Nr. (gesamt)" columns
 gg = gg.drop(nr_gesamt_cols.columns, axis=1)
 
-# TODO Das ist vielleicht eher Teil des Feature engineerings und nicht data cleaning
 # Indication flawless victory of chaser
 gg['flawless'] = np.where(gg['Zeit bzw. Punkte des Jägers'].str.contains("fehlerlos"), 1, 0)
 
 # Indication victory of chaser or contenders
 gg['win_chaser'] = np.where(gg['Zeit bzw. Punkte des Jägers'].str.contains("Punkte"), 0, 1)
 
-# Time it took for Jäger to win
+
+# Duration of the chase
 def extract_time(str):
     '''Function to extract duration of chase from "Zeit bzw. Punkte des Jägers" column'''
 
@@ -50,6 +49,7 @@ def extract_time(str):
             duration = duration + int(seconds.group(1))
 
     return duration
+
 
 gg['chase_duration'] = gg['Zeit bzw. Punkte des Jägers'].apply(extract_time)
 
@@ -80,3 +80,18 @@ gg['setbacks'] = gg['Finalisten'].apply(
 
 # Who won the finale
 gg['chaser_won'] = np.where(gg['finalists_pts'] <= gg['chaser_pts'], 1, 0)
+
+# Cleaning prize column
+gg['prize'] = gg[gg.columns[6]]\
+                    .str.replace(".", "")\
+                    .str.replace("€", "")\
+                    .str.lstrip("0")\
+                    .str.strip()\
+                    .astype(int)
+
+# Cleaning date column
+month_dict = {"Jan.": "January", "Feb.": "February", "März": "March", "Apr": "April", "Mai": "May",
+              "Juni": "June", "Juli": "July", "Sep.": "September", "Okt.": "October", "Nov.": "November",
+              "Dez.": "December"}
+
+gg['date'] = pd.to_datetime(gg['Datum'].replace(to_replace=month_dict, regex=True))
