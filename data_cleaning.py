@@ -99,6 +99,9 @@ gg['date'] = pd.to_datetime(gg['Datum'].replace(to_replace=month_dict, regex=Tru
 # Drop rows that refer to specials
 gg = gg[~gg['Nr. (Staffel)'].str.contains('S')].copy()
 
+# Clean episode in season
+gg['episode_in_season'] = gg['Nr. (Staffel)'].astype(int)
+
 
 # Categorizing episodes to seasons
 def get_season(series):
@@ -118,5 +121,8 @@ def get_season(series):
 
 gg['season'] = get_season(gg['Nr. (Staffel)'])
 
+# Simple index of episodes without specials
+gg['episode_without_special'] = np.arange(1, len(gg) + 1, 1)
+
 # Exporting to Excel for use in Tableau
-gg.to_excel('Gefragt_gejagt.xlsx')
+gg.to_excel('Gefragt_gejagt.xlsx', index=False)
