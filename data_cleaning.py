@@ -15,9 +15,9 @@ gg['Finalisten'] = gg['Finalisten'].apply(lambda x: unicodedata.normalize("NFKD"
 
 # Clean the "Nr. (gesamt) column
 nr_gesamt_cols = gg.filter(like='gesamt', axis=1)
-gg['episode'] = nr_gesamt_cols[nr_gesamt_cols.columns[0]]\
-    .combine_first(nr_gesamt_cols[nr_gesamt_cols.columns[1]])\
-    .combine_first(nr_gesamt_cols[nr_gesamt_cols.columns[2]])\
+gg['episode'] = nr_gesamt_cols[nr_gesamt_cols.columns[0]] \
+    .combine_first(nr_gesamt_cols[nr_gesamt_cols.columns[1]]) \
+    .combine_first(nr_gesamt_cols[nr_gesamt_cols.columns[2]]) \
     .combine_first(nr_gesamt_cols[nr_gesamt_cols.columns[1]])
 
 # Drop the no irrelevant "Nr. (gesamt)" columns
@@ -31,17 +31,17 @@ gg['win_chaser'] = np.where(gg['Zeit bzw. Punkte des Jägers'].str.contains("Pun
 
 
 # Duration of the chase
-def extract_time(str):
+def extract_time(string):
     '''Function to extract duration of chase from "Zeit bzw. Punkte des Jägers" column'''
 
     # Set duration to 120 if chaser lost (i.e. "Punkte" is in string)
-    if "Punkte" in str:
+    if "Punkte" in string:
         duration = 120
     else:
         duration = 0
         # Search for minutes and seconds
-        minutes = re.search(r'(\d+)(?:\sMin.)', str)
-        seconds = re.search(r'(\d+)(?:\sSek.)', str)
+        minutes = re.search(r'(\d+)(?:\sMin.)', string)
+        seconds = re.search(r'(\d+)(?:\sSek.)', string)
 
         if minutes is not None:
             duration = duration + int(minutes.group(1)[-1]) * 60
@@ -82,12 +82,12 @@ gg['setbacks'] = gg['Finalisten'].apply(
 gg['chaser_won'] = np.where(gg['finalists_pts'] <= gg['chaser_pts'], 1, 0)
 
 # Cleaning prize column
-gg['prize'] = gg[gg.columns[6]]\
-                    .str.replace(".", "")\
-                    .str.replace("€", "")\
-                    .str.lstrip("0")\
-                    .str.strip()\
-                    .astype(int)
+gg['prize'] = gg[gg.columns[6]] \
+    .str.replace(".", "") \
+    .str.replace("€", "") \
+    .str.lstrip("0") \
+    .str.strip() \
+    .astype(int)
 
 # Cleaning date column
 month_dict = {"Jan.": "January", "Feb.": "February", "März": "March", "Apr": "April", "Mai": "May",
@@ -96,5 +96,27 @@ month_dict = {"Jan.": "January", "Feb.": "February", "März": "March", "Apr": "A
 
 gg['date'] = pd.to_datetime(gg['Datum'].replace(to_replace=month_dict, regex=True))
 
-# Export to Excel for Tableau
-gg.to_excel("Gefragt_gejagt.xlsx")
+# Drop rows that refer to specials
+gg = gg[~gg['Nr. (Staffel)'].str.contains('S')].copy()
+
+
+# Categorizing episodes to seasons
+def get_season(series):
+    '''Function to number seasons based on episode numbers'''
+
+    series = series.astype(int)
+    season_numbers = []
+    season = 0
+    for episode in series:
+        if episode == 1:
+            season += 1
+
+        season_numbers.append(season)
+
+    return season_numbers
+
+
+gg['season'] = get_season(gg['Nr. (Staffel)'])
+
+# Exporting to Excel for use in Tableau
+gg.to_excel('Gefragt_gejagt.xlsx')
